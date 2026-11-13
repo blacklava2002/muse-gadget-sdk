@@ -101,7 +101,7 @@ dependencies:
   espressif/esp_lcd_co5300:
     version: "^2.2.0"
     rules:
-      - if: "$CONFIG{MUSE_BOARD_ID} in [\"m5stack_stopwatch\", \"esp_mosaico\", \"waveshare_s3_143\", \"lilygo_s3_amoled_175\"]"
+      - if: "$CONFIG{MUSE_BOARD_ID} in [\"m5stack_stopwatch\", \"esp_mosaico\", \"waveshare_s3_143\", \"lilygo_s3_amoled_175\", \"waveshare_s3_18\"]"
   espressif/esp_lcd_touch_ft5x06:
     version: "^1.0.6"
     rules:

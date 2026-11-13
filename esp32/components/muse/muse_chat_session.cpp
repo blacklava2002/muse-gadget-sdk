@@ -1836,8 +1836,6 @@ static void on_event(cJSON *line)
         pending_event(event, payload, line);
         return;
     }
-    const char *event = cJSON_GetStringValue(cJSON_GetObjectItem(line, "event")) ?: "";
-    cJSON *payload = cJSON_GetObjectItem(line, "payload");
     push_maybe_begin(event, payload, line);
     if (s_turn.phase != P_WAIT_REPLY) {
         return;
