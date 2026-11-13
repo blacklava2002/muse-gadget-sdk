@@ -379,6 +379,12 @@ static esp_err_t audio_init(esp_codec_dev_handle_t *spk, esp_codec_dev_handle_t 
     i2s_chan_handle_t tx, rx;
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
     chan_cfg.auto_clear = true;
+    /* Smaller DMA than the IDF defaults (6 desc x 240 frames): with live
+     * voice on, internal DMA RAM is too fragmented by the time audio inits
+     * (Wi-Fi is already connected) and the default RX allocation fails.
+     * 4 x 128 frames is ~8 ms of audio per buffer at 16 kHz. */
+    chan_cfg.dma_desc_num = 4;
+    chan_cfg.dma_frame_num = 128;
     ESP_RETURN_ON_ERROR(i2s_new_channel(&chan_cfg, &tx, &rx), TAG, "i2s channel");
     const i2s_std_config_t std_cfg = {
         .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(MUSE_AUDIO_RATE),
