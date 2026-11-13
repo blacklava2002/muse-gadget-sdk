@@ -58,7 +58,7 @@ static const char *TAG = "muse_ui";
 #define RING_RANGE 1000
 #define CAPTION_W 256           /* 16 columns of unscii_16, the width reply captions wrap to */
 #define CAPTION_LINE_SPACE 2
-#define ART_BLANK_ROWS 3        /* Muse's art never reaches the grid's bottom rows */
+#define ART_BLANK_ROWS MUSE_PX_BLANK_ROWS   /* Muse's art never reaches the grid's bottom rows */
 #define MINI_CELL_PX 2          /* Muse's grid cells over a reply that's read */
 #define ANSWER_MS 300           /* Muse making room for a reply, and back */
 #define SPEAKER_PX 64
@@ -364,7 +364,7 @@ static void invalidate_muse(void)
         return;
     }
     int size = (int)s_muse_src.header.w;
-    lv_area_t r[MUSE_PX_H];   /* in cells */
+    static lv_area_t r[MUSE_PX_H];   /* in cells; the LVGL task is its only user */
     int n = 0;
     for (int cy = 0; cy < MUSE_PX_H; cy++) {
         int32_t y = cell_px(cy, size);
@@ -749,6 +749,10 @@ static void build_answer(lv_obj_t *face, int ring_in)
     int cell = s_canvas_px / MUSE_PX_W - 1;
     cell = cell > MINI_CELL_PX ? cell : MINI_CELL_PX;
     l->px = MUSE_PX_W * cell;
+    if (MUSE_PX_HEARD_PX) {
+        l->px = LV_MIN(MUSE_PX_HEARD_PX, s_canvas_px);
+        cell = l->px / MUSE_PX_W;
+    }
     l->y = s_big_y;
     l->align = LV_TEXT_ALIGN_CENTER;
     int h = 3 * pitch - CAPTION_LINE_SPACE;
@@ -767,10 +771,15 @@ static void build_answer(lv_obj_t *face, int ring_in)
 
     l = &s_answers[ANSWER_READ];
     int status_bottom = 20 + s_dy + 16 - s_h / 2;
-    l->px = MUSE_PX_W * MINI_CELL_PX;
+    int mini_cell = MINI_CELL_PX;
+    l->px = MUSE_PX_W * mini_cell;
+    if (MUSE_PX_MINI_PX) {
+        l->px = LV_MIN(MUSE_PX_MINI_PX, s_canvas_px);
+        mini_cell = l->px / MUSE_PX_W;
+    }
     l->y = status_bottom + 2 + l->px / 2;   /* its sparkles clear of the status line */
     l->align = LV_TEXT_ALIGN_LEFT;
-    art_bottom = l->y + l->px / 2 - ART_BLANK_ROWS * MINI_CELL_PX;
+    art_bottom = l->y + l->px / 2 - ART_BLANK_ROWS * mini_cell;
     int top = (art_bottom > spk_y + spk_r ? art_bottom : spk_y + spk_r) + 8;
     set_reply_box(l, 16, 2, top, cw, pitch);
     /* The widest page isn't the biggest: a round screen narrows towards the bottom. */

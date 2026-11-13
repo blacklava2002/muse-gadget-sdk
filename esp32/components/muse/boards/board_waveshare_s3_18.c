@@ -45,6 +45,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_sh8601.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "esp_lv_adapter.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -285,6 +286,14 @@ static void tp_read(lv_indev_t *indev, lv_indev_data_t *data)
     data->point.x = x < LCD_H_RES ? x : LCD_H_RES - 1;
     data->point.y = y < LCD_V_RES ? y : LCD_V_RES - 1;
     data->state = LV_INDEV_STATE_PRESSED;
+    /* DIAG(MOS-11): raw vs clamped touch, ~10 Hz */
+    static int64_t last_us;
+    int64_t now = esp_timer_get_time();
+    if (now - last_us > 100000) {
+        last_us = now;
+        ESP_LOGW(TAG, "TOUCHDIAG raw=%d,%d clamped=%d,%d b=%02x %02x %02x %02x %02x", x, y, (int)data->point.x,
+                 (int)data->point.y, b[0], b[1], b[2], b[3], b[4]);
+    }
 }
 
 /* As on the 1.75C, the bands go out through fixed internal buffers. */

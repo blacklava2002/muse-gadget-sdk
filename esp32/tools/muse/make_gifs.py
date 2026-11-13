@@ -49,7 +49,8 @@ def render(src, out):
     with tempfile.TemporaryDirectory() as tmp:
         exe = os.path.join(tmp, "muse_anim")
         subprocess.run(
-            ["cc", "-O2", "-Wall", "-I", "components/muse", "tools/muse/anim.c", src, "-lm", "-o", exe],
+            ["cc", "-O2", "-Wall", "-I", "components/muse", *(["-DMUSE_CUSTOM_AVATAR_GRID=1"] if src == CUSTOM_SRC else []),
+             "tools/muse/anim.c", src, "-lm", "-o", exe],
             cwd=ROOT, check=True, capture_output=True, text=True,
         )
         frames_dir = os.path.join(tmp, "frames")

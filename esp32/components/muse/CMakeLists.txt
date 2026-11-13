@@ -126,6 +126,12 @@ idf_component_register(
     PRIV_REQUIRES ${muse_priv_requires}
 )
 
+if(CONFIG_MUSE_ENABLED AND custom_avatar)
+    # The custom avatar's grid (avatar/muse_avatar_grid.h) reaches muse_pixel.h
+    # in every file that includes it, here and in the project's main/.
+    target_compile_definitions(${COMPONENT_LIB} PUBLIC MUSE_CUSTOM_AVATAR_GRID=1)
+endif()
+
 if(CONFIG_MUSE_ENABLED)
     # LVGL spins forever on a failed assert unless LV_ASSERT_HANDLER is set,
     # which its Kconfig can't do. Abort, so the panic handler prints a backtrace

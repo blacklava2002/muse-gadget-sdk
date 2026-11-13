@@ -29,8 +29,30 @@
  * nearest-neighbour blocks so the pixels stay chunky.
  */
 
+/*
+ * A custom avatar (components/muse/avatar/, see tools/muse/AVATAR_RECIPE.md)
+ * may use another grid: the build then defines MUSE_CUSTOM_AVATAR_GRID and
+ * avatar/muse_avatar_grid.h sets the values below. The grid stays square: the
+ * UI's canvas is. Defaults are the stock 64x64 avatar's.
+ */
+#ifdef MUSE_CUSTOM_AVATAR_GRID
+#include "avatar/muse_avatar_grid.h"
+#endif
+#ifndef MUSE_PX_W
 #define MUSE_PX_W 64
 #define MUSE_PX_H 64
+#endif
+/* Rows at the bottom of the grid the art never reaches (it tucks behind the meter). */
+#ifndef MUSE_PX_BLANK_ROWS
+#define MUSE_PX_BLANK_ROWS 3
+#endif
+/* Screen size of Muse over a reply that's heard / read, or 0 for the UI's own rule (cells of the canvas's). */
+#ifndef MUSE_PX_HEARD_PX
+#define MUSE_PX_HEARD_PX 0
+#endif
+#ifndef MUSE_PX_MINI_PX
+#define MUSE_PX_MINI_PX 0
+#endif
 
 typedef struct {
     muse_mode_t mode;
@@ -38,6 +60,9 @@ typedef struct {
     float mode_t;    /* seconds in current mode */
     float level;     /* 0..1 live audio level */
     float happy;     /* 0..1 pet reaction */
+    float working;   /* 0..1: thinking while Muse works on a call (newer-upstream field the
+                      * procedural Martha avatar reads; this fork's UI never sets it, so it
+                      * stays 0 - added 2026-11-13 so that avatar compiles unmodified) */
     /* Reactions, each 0 when not happening, else 0..1 through it. An avatar
      * that ignores them still renders; the default one does. */
     float dizzy;     /* shaken: wobble with spiral eyes and stars, sit dazed, stand back up (MUSE_DIZZY_S) */
