@@ -448,8 +448,6 @@ static void watcher_buttons(unsigned ev)
 }
 #endif
 
-/* A pairing prompt wakes the screen and keeps it on; otherwise idle sleeps. */
-static void check_sleep(void)
 /* While drowsing, snores start this far through (muse_state_sleepy()). */
 static const float SNORE_AT[] = { 0.6f, 0.8f };
 
