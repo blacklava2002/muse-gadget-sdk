@@ -96,6 +96,7 @@ BaseType_t xQueueReceive(QueueHandle_t q, void *p, TickType_t t) {
     memmove(q->items,q->items+1,q->n*sizeof(q->items[0]));
     return pdTRUE;
 }
+UBaseType_t uxQueueMessagesWaiting(QueueHandle_t q) { return q ? (UBaseType_t)q->n : 0; }
 int64_t esp_timer_get_time(void) { return clock_us; }
 void vTaskDelay(int ms) {
     clock_us += (int64_t)ms*1000;
@@ -139,6 +140,10 @@ bool muse_state_asleep(void) { return sleep_state; }
 bool muse_state_on_battery(void) { return false; }
 void muse_state_wait_awake(uint32_t ms) { vTaskDelay(ms); }
 bool muse_settings_voice_notes(void) { return notes_mode; }
+float muse_state_sleepy(void) { return 0; }
+bool muse_settings_speaker_on(void) { return true; }
+bool muse_hatch_push_take(void) { return false; }
+void muse_hatch_push_drop(void) {}
 int muse_settings_volume(void) { return 20; }
 int muse_settings_mic_gain(void) { return 30; }
 bool muse_wifi_connected(void) { return ready; }

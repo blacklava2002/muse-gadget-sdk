@@ -23,3 +23,7 @@
 #define CONFIG_MUSE_REALTIME_VOICE_IDLE_S 45
 #define CONFIG_MUSE_REALTIME_VOICE_MAX_S 900
 #endif
+/* The fork's ElevenLabs TTS configs: unconditional in its Kconfig, with these defaults. */
+#define CONFIG_MUSE_ELEVENLABS_API_KEY ""
+#define CONFIG_MUSE_ELEVENLABS_VOICE_ID "cgSgspJ2msm6clMCkdW9"
+#define CONFIG_MUSE_ELEVENLABS_MODEL "eleven_flash_v2_5"

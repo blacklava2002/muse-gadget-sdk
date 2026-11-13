@@ -31,6 +31,10 @@ bool muse_settings_speaker_on(void) { return speaker; }
 void muse_settings_set_speaker_on(bool v) { speaker=v; ++speaker_toggles; }
 void muse_state_set_asleep(bool v) { asleep=v; slept+=v; }
 bool muse_state_asleep(void) { return asleep; }
+float muse_state_sleepy(void) { return 0; }
+bool muse_state_start_drowsing(float idle_s) { (void)idle_s; return false; }
+void muse_state_end_drowsing(void) {}
+void muse_voice_request_snore(void) {}
 bool muse_state_on_battery(void) { return false; }
 void muse_state_poke(void) {}
 void muse_state_set_level(float v) { (void)v; }

@@ -29,6 +29,12 @@ static float source_level;
 static muse_pose_t rendered;
 static struct { void *data; } s_image_dsc;
 static void *s_tv;
+float muse_state_dizzy(void) { return 0; }    /* fork reaction poses, read by the extracted frame_tick */
+float muse_state_sleepy(void) { return 0; }
+float muse_state_waking(void) { return 0; }
+float muse_state_tickle(void) { return 0; }
+static void volume_drag(float now) { (void)now; }   /* fork UI: defined in muse_ui.c outside the extracted frame */
+static void tickle_poll(void) {}                    /* fork UI: ditto */
 static void send_snapshot(void) {}
 static void image_sync(void) {}
 static void image_hide_locked(void) {}

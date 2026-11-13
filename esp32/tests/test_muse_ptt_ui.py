@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MUSE = ROOT / 'components/muse'
 FAKE_HEADERS = [
     'esp_attr.h', 'esp_err.h', 'esp_heap_caps.h', 'esp_log.h', 'esp_timer.h',
-    'esp_codec_dev.h', 'lvgl.h', 'driver/gpio.h', 'nvs.h', 'nvs_flash.h',
+    'esp_codec_dev.h', 'lvgl.h', 'driver/gpio.h', 'driver/i2c_master.h', 'nvs.h', 'nvs_flash.h',
     'freertos/FreeRTOS.h', 'freertos/task.h', 'freertos/queue.h',
     'freertos/idf_additions.h', 'freertos/semphr.h',
 ]

@@ -458,8 +458,8 @@ static bool pairing_prompt(void)
     return ble.passkey || muse_link_state() == MUSE_LINK_CONFIRM;
 }
 
-/*
- * A pairing prompt wakes the screen and keeps it on; otherwise idle sleeps.
+/* A pairing prompt wakes the screen and keeps it on; otherwise idle sleeps.
+ *
  * The last MUSE_SLEEPY_S before that Muse drowses (the avatar nods off, with
  * a snore or two) and only then does the screen go dark. Anything that pokes
  * meanwhile wakes Muse back up (muse_state.h).

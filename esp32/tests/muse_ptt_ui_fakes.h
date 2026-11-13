@@ -41,12 +41,15 @@ typedef int esp_err_t;
 typedef int BaseType_t;
 typedef uint32_t TickType_t;
 typedef void *TaskHandle_t;
+typedef void *i2c_master_bus_handle_t;
 typedef void *SemaphoreHandle_t;
 typedef struct test_queue *QueueHandle_t;
 #define pdTRUE 1
 #define pdPASS 1
 #define pdMS_TO_TICKS(x) (x)
 #define portMAX_DELAY UINT32_MAX
+typedef unsigned UBaseType_t;
+UBaseType_t uxQueueMessagesWaiting(QueueHandle_t);
 BaseType_t xQueueReceive(QueueHandle_t, void *, TickType_t);
 BaseType_t xQueuePeek(QueueHandle_t, void *, TickType_t);
 BaseType_t xQueueSend(QueueHandle_t, const void *, TickType_t);
