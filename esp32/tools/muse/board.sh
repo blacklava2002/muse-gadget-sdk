@@ -149,7 +149,6 @@ if [ "$cmd" = build ]; then
     clean
     # The SDK token and API keys, from secrets/ or the environment (never git).
     python3 "$root/tools/muse/secrets.py" "$B/sdkconfig" || exit 1
-    idf.py -B $B -DIDF_TARGET=$target -DSDKCONFIG=$B/sdkconfig \
     idf.py ${preview:-} -B $B -DIDF_TARGET=$target ${iris:-} -DSDKCONFIG=$B/sdkconfig \
         -DSDKCONFIG_DEFAULTS="$defaults" \
         build > $log 2>&1; rc=$?
