@@ -60,3 +60,7 @@ CONFIG_ESP_TASK_WDT_PANIC=y
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=20
 CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y
 CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
+
+# Live voice calls (upgrade plan step 7, Nov 13): tap BOOT starts/hangs up a
+# realtime call; hold BOOT still sends a voice note. Set =n to roll back.
+CONFIG_MUSE_REALTIME_VOICE=y
