@@ -61,6 +61,7 @@ CONFIG_ESP_TASK_WDT_TIMEOUT_S=20
 CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y
 CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
 
-# Live voice calls (upgrade plan step 7, Nov 13): tap BOOT starts/hangs up a
-# realtime call; hold BOOT still sends a voice note. Set =n to roll back.
-CONFIG_MUSE_REALTIME_VOICE=y
+# Live voice calls: tried Nov 13 (upgrade plan step 7) and Sean chose
+# PTT-only (hold BOOT = voice note) for now -- live calls stalled/hung up
+# on turns where the agent does slow work. Flip back to =y to re-enable.
+# CONFIG_MUSE_REALTIME_VOICE is not set
