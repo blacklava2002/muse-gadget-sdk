@@ -399,7 +399,6 @@ static lv_obj_t *switch_row_icon(lv_obj_t *list, const char *icon, const char *t
     if (icon) {
         label(c, &lv_font_montserrat_20, COLOR_ACCENT, icon);
     }
-    lv_obj_t *t = label(c, &lv_font_montserrat_20, COLOR_TEXT, text);
     lv_obj_t *t = label(c, stacked_rows() ? &lv_font_montserrat_16 : &lv_font_montserrat_20, COLOR_TEXT, text);
     lv_obj_set_flex_grow(t, 1);
     if (stacked_rows()) {
