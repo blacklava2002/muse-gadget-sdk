@@ -240,7 +240,6 @@ if(CONFIG_MUSE_ENABLED AND custom_avatar)
     target_compile_definitions(${COMPONENT_LIB} PUBLIC MUSE_CUSTOM_AVATAR_GRID=1)
 endif()
 
-if(CONFIG_MUSE_ENABLED)
 if(CONFIG_MUSE_UI_FREEINK)
     # FreeInk's board profile, for the panel and its pins. PUBLIC: FreeInk's
     # headers read it too, in every file that includes them.
