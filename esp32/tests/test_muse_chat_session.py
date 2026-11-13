@@ -101,6 +101,15 @@ static void resampler_init(resampler_t *, int, int) {}
 static void on_dictation_end(bool) {}
 /* This fork's pushes live outside the extracted handlers (All messages). */
 static void push_maybe_begin(const char *, cJSON *, cJSON *) {}
+/* The fork's ElevenLabs start_tts (extracted below) needs its TTS plumbing
+ * stubbed: disabled here, so the extracted body takes the paced-silence path. */
+static bool tts_enabled() { return false; }
+static bool tts_start(const char *) { return false; }
+static bool s_tts_pending;
+struct fake_atomic_bool { bool load() const { return false; } };
+static fake_atomic_bool s_tts_busy;
+bool muse_settings_speaker_on() { return true; }
+extern "C" void mp3dec_init(mp3dec_t *) {}   /* minimp3 implementation is not linked into this harness */
 static void log_marks() {}
 #if CONFIG_MUSE_BOARD_SENSECAP_WATCHER
 /* The real review store, read back whole: one page holds all of it here. */
