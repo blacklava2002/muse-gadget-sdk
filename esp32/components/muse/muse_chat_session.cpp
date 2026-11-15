@@ -1833,7 +1833,17 @@ static void on_event(cJSON *line)
     }
     cJSON *payload = cJSON_GetObjectItem(line, "payload");
     if (s_turn.phase == P_IDLE) {
-        pending_event(event, payload, line);
+        /* The fork's All-messages push gets first claim on an idle message:
+         * push_maybe_begin starts a push turn for anything not already shown.
+         * If it does not (All messages off, busy, already shown), the late-reply
+         * holder still sees the event, so replies to a gadget request that
+         * outlived its turn are kept exactly as upstream designed. (The merge
+         * left push_maybe_begin below this branch, where its own P_IDLE check
+         * made it unreachable and pushes never fired.) */
+        push_maybe_begin(event, payload, line);
+        if (s_turn.phase == P_IDLE) {
+            pending_event(event, payload, line);
+        }
         return;
     }
     push_maybe_begin(event, payload, line);
