@@ -137,7 +137,7 @@ static lv_obj_t *s_sleep_checks[SLEEP_COUNT], *s_sleep_rows[SLEEP_COUNT];
 static int s_sleep_shown = -1;
 
 /* Battery page. */
-static lv_obj_t *s_batt_level, *s_batt_left;
+static lv_obj_t *s_batt_level, *s_batt_left, *s_batt_bright_sl, *s_batt_bright_val;
 static int64_t s_batt_shown_us;
 
 /* Text entry page. */
@@ -1368,6 +1368,19 @@ static void on_bright(lv_event_t *e)
     }
 }
 
+/* The Battery page's own brightness slider: same behaviour as on_bright, but
+ * reads its own slider (s_bright_sl belongs to the Sound/Screen page). */
+static void on_bright_batt(lv_event_t *e)
+{
+    int v = lv_slider_get_value(lv_event_get_target(e));
+    set_val(s_batt_bright_val, "%d%%", v);
+    if (lv_event_get_code(e) == LV_EVENT_RELEASED) {
+        muse_settings_set_brightness(v);
+    } else {
+        muse_ui_preview_brightness(v);
+    }
+}
+
 static void build_sound_page(lv_obj_t *tile)
 {
     lv_obj_t *list;
@@ -1520,6 +1533,7 @@ static void build_battery_page(lv_obj_t *tile)
     s_batt_shown_us = 0;
     s_batt_level = info_row(list, "Battery");
     s_batt_left = info_row(list, "Time left");
+    s_batt_bright_sl = slider(list, "Brightness", 10, 100, muse_settings_brightness(), &s_batt_bright_val, on_bright_batt);
     note(list, "Time left follows the last few minutes of use, from about a minute after unplugging USB.");
 }
 

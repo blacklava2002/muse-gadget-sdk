@@ -223,13 +223,15 @@ static int s_shown_speaker = -1;
 static muse_mode_t s_last_mode = MUSE_MODE_COUNT;
 static muse_mode_t s_last_epaper_pose = MUSE_MODE_COUNT;
 
-/* Touch boards: a vertical drag on Muse's screen sets the volume. */
-enum { DRAG_NONE, DRAG_WATCH, DRAG_VOLUME, DRAG_OTHER };
+/* Touch boards: a vertical drag on Muse's screen sets the volume when it
+ * starts on the right half, the brightness when it starts on the left. */
+enum { DRAG_NONE, DRAG_WATCH, DRAG_VOLUME, DRAG_BRIGHTNESS, DRAG_OTHER };
 static lv_obj_t *s_vol;         /* a ring inside the bezel, or a bar on a rectangle's right edge */
 static int s_vol_step_px;
 static int s_drag = DRAG_NONE;
 static lv_point_t s_drag_at;    /* where the press started, then where the last step was taken */
 static int s_drag_vol;
+static int s_drag_bright;
 static float s_vol_hide_at;     /* 0 once fading */
 
 /*
@@ -1578,6 +1580,8 @@ static void volume_drag(float now)
         if (s_drag == DRAG_VOLUME) {
             muse_settings_set_volume(s_drag_vol);
             muse_voice_request_chirp();
+        } else if (s_drag == DRAG_BRIGHTNESS) {
+            muse_settings_set_brightness(s_drag_bright);
         }
         s_drag = DRAG_NONE;
         if (s_vol_hide_at > 0 && now >= s_vol_hide_at) {
@@ -1597,11 +1601,29 @@ static void volume_drag(float now)
             || s_rub.turns >= 2) {
             s_drag = DRAG_OTHER;
         } else if (dy >= s_vol_step_px && dy > 2 * dx) {
-            s_drag = DRAG_VOLUME;
-            s_drag_vol = muse_settings_volume();
             lv_indev_wait_release(s_indev);
-            show_volume(s_drag_vol, now);
+            if (s_drag_at.x < lv_obj_get_width(s_tv) / 2) {
+                s_drag = DRAG_BRIGHTNESS;
+                s_drag_bright = muse_settings_brightness();
+                muse_ui_preview_brightness(s_drag_bright);
+            } else {
+                s_drag = DRAG_VOLUME;
+                s_drag_vol = muse_settings_volume();
+                show_volume(s_drag_vol, now);
+            }
         }
+    }
+    if (s_drag == DRAG_BRIGHTNESS) {
+        int bsteps = (s_drag_at.y - p.y) / s_vol_step_px;
+        s_drag_at.y -= bsteps * s_vol_step_px;
+        int b = LV_CLAMP(10, s_drag_bright + bsteps * VOL_STEP, 100);
+        if (b != s_drag_bright) {
+            s_drag_bright = b;
+            muse_ui_preview_brightness(b);
+            muse_state_poke();
+            ESP_LOGI(TAG, "brightness %d (touch)", b);
+        }
+        return;
     }
     if (s_drag != DRAG_VOLUME) {
         return;
