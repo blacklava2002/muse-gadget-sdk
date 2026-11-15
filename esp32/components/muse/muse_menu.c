@@ -71,6 +71,7 @@ typedef enum {
     ITEM_BRIGHTNESS,
     ITEM_MIC,
     ITEM_SLEEP,
+    ITEM_ALWAYS_ON,
 #if CONFIG_MUSE_SMALL_FULL_REPLY
     ITEM_TEXT,
 #endif
@@ -94,6 +95,7 @@ static const char *const ITEM_NAMES[ITEM_COUNT] = {
     [ITEM_BRIGHTNESS] = "Brightness",
     [ITEM_MIC] = "Mic gain",
     [ITEM_SLEEP] = "Auto-sleep",
+    [ITEM_ALWAYS_ON] = "Always on (USB)",
 #if CONFIG_MUSE_SMALL_FULL_REPLY
     [ITEM_TEXT] = "Text size",
 #endif
@@ -117,6 +119,7 @@ static const char *const ITEM_ACTIONS[ITEM_COUNT] = {
     [ITEM_BRIGHTNESS] = "Change",
     [ITEM_MIC] = "Change",
     [ITEM_SLEEP] = "Change",
+    [ITEM_ALWAYS_ON] = "Toggle",
 #if CONFIG_MUSE_SMALL_FULL_REPLY
     [ITEM_TEXT] = "Change",
 #endif
@@ -283,6 +286,9 @@ static void value_text(int item, char *buf, size_t n)
         break;
     case ITEM_SLEEP:
         strlcpy(buf, sleep_name(muse_settings_sleep_s()), n);
+        break;
+    case ITEM_ALWAYS_ON:
+        strlcpy(buf, muse_settings_always_on() ? "On" : "Off", n);
         break;
 #if CONFIG_MUSE_SMALL_FULL_REPLY
     case ITEM_TEXT:
@@ -492,6 +498,9 @@ static void activate(int item, int direction)
         break;
     case ITEM_SLEEP:
         muse_settings_set_sleep_s(value_step(SLEEP_STEPS, COUNT(SLEEP_STEPS), muse_settings_sleep_s(), direction));
+        break;
+    case ITEM_ALWAYS_ON:
+        muse_settings_set_always_on(!muse_settings_always_on());
         break;
 #if CONFIG_MUSE_SMALL_FULL_REPLY
     case ITEM_TEXT:

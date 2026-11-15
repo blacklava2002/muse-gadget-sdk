@@ -66,6 +66,7 @@ const char *esp_err_to_name(esp_err_t e) { (void)e; return "failed"; }
 bool muse_settings_ble_on(void) { return ble; }
 void muse_settings_set_ble_on(bool v) { ble=v; ++toggled; }
 int muse_settings_sleep_s(void) { return 120; }
+bool muse_settings_always_on(void) { return false; }
 void muse_ble_status(muse_ble_status_t *p) { memset(p,0,sizeof(*p)); }
 muse_link_state_t muse_link_state(void) { return MUSE_LINK_ONLINE; }
 bool muse_link_talk_press(void) { return pairing; }

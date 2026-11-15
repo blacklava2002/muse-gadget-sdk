@@ -41,10 +41,12 @@ esp_err_t muse_settings_set_hatch_token(const char *s, bool v) { (void)s; (void)
 void muse_settings_set_hatch_vm(const char *s) { (void)s; abort(); }
 void muse_settings_set_mic_gain(int v) { (void)v; abort(); }
 void muse_settings_set_sleep_s(int v) { (void)v; abort(); }
+void muse_settings_set_always_on(bool v) { (void)v; abort(); }
 void muse_settings_set_speaker_on(bool v) { (void)v; abort(); }
 void muse_settings_set_volume(int v) { (void)v; abort(); }
 void muse_settings_set_wifi_on(bool v) { (void)v; abort(); }
 int muse_settings_sleep_s(void) { abort(); }
+bool muse_settings_always_on(void) { return false; }
 bool muse_settings_speaker_on(void) { abort(); }
 int muse_settings_volume(void) { abort(); }
 bool muse_settings_wifi_on(void) { abort(); }

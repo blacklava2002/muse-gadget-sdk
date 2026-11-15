@@ -127,6 +127,7 @@ static const muse_lang_entry_t MENU[] = {
     { "Brightness", "Độ sáng" },
     { "Mic gain", "Độ nhạy mic" },
     { "Auto-sleep", "Tự ngủ" },
+    { "Always on (USB)", "Luôn bật (USB)" },
     { "Text size", "Cỡ chữ" },
     { "Phone setup", "Cài qua điện thoại" },
     { "Status", "Trạng thái" },

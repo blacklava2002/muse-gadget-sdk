@@ -468,11 +468,22 @@ static void check_sleep(void)
 {
     static bool drowsing;
     static int snores;
+    static int plugged = -1;   /* unknown until the first check: boot doesn't count as plugging in */
     if (pairing_prompt()) {
         muse_state_end_drowsing();
         set_asleep(false, "pairing");
         return;
     }
+    /* With Always on, USB power keeps it on too, and plugging in wakes it.
+     * The power button and Screen off still turn it off. */
+    bool usb = !muse_state_on_battery();
+    bool always_on = muse_settings_always_on();
+    if (always_on && usb && plugged == 0) {
+        set_asleep(false, "plugged in");
+        muse_state_poke();
+    }
+    plugged = usb;
+    if (always_on && usb) return;
     if (muse_voice_in_call()) return;
     if (muse_state_asleep()) {
         drowsing = false;

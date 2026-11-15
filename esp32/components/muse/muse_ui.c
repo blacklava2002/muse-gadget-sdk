@@ -1988,6 +1988,44 @@ bool muse_ui_dark(void)
     return s_dark;
 }
 
+/*
+ * Always on (USB), left idle: the screen dims where it would have gone to
+ * sleep (or after LIT_DIM_AFTER_S, if sooner or never), and the face moves a
+ * couple of pixels every LIT_SHIFT_S, so an AMOLED doesn't keep a ghost of
+ * the labels and the ring. Any touch, press or turn puts both back. Steps
+ * stay even: the SH8601 and CO5300 want even-aligned windows. Returns the
+ * brightness to show.
+ */
+#define LIT_DIM_PCT 15
+#define LIT_DIM_AFTER_S 300
+#define LIT_SHIFT_S 120
+#define LIT_SHIFT_PX 2
+
+static int keep_lit(int target)
+{
+    static const int8_t SHIFTS[][2] = {
+        { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 }, { 0, -1 }, { 1, -1 },
+    };
+    static int shown;   /* SHIFTS index applied to the face */
+    if (muse_board->epaper) {
+        return target;
+    }
+    float idle = muse_state_idle_secs();
+    int after = muse_settings_sleep_s();
+    if (!after || after > LIT_DIM_AFTER_S) {
+        after = LIT_DIM_AFTER_S;
+    }
+    bool resting = muse_settings_always_on() && !muse_state_on_battery()
+                   && muse_state_mode(NULL) == MUSE_MODE_IDLE && idle > after;
+    int shift = resting && s_face_active ? (int)((idle - after) / LIT_SHIFT_S) % (int)(sizeof(SHIFTS) / sizeof(SHIFTS[0])) : 0;
+    if (s_face && shift != shown) {
+        lv_obj_set_style_translate_x(s_face, SHIFTS[shift][0] * LIT_SHIFT_PX, 0);
+        lv_obj_set_style_translate_y(s_face, SHIFTS[shift][1] * LIT_SHIFT_PX, 0);
+        shown = shift;
+    }
+    return resting && target > LIT_DIM_PCT ? LIT_DIM_PCT : target;
+}
+
 /* Returns true while asleep (skip rendering). */
 static bool update_sleep(void)
 {
@@ -2013,6 +2051,7 @@ static bool update_sleep(void)
     }
     if (!s_dark) {
         int target = muse_settings_brightness();
+        target = keep_lit(target);
         if (s_preview_brightness >= 0) {
             if (s_preview_brightness == target) {
                 s_preview_brightness = -1;

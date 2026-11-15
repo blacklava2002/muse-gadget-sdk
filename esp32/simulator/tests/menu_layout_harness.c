@@ -91,6 +91,7 @@ bool muse_settings_speaker_on(void) { return true; }
 int muse_settings_brightness(void) { return 80; }
 int muse_settings_mic_gain(void) { return 24; }
 int muse_settings_sleep_s(void) { return 60; }
+bool muse_settings_always_on(void) { return false; }
 bool muse_settings_ble_on(void) { return false; }
 bool muse_settings_wifi_on(void) { return true; }
 void muse_settings_set_volume(int v) { (void)v; }
@@ -98,6 +99,7 @@ void muse_settings_set_speaker_on(bool v) { (void)v; }
 void muse_settings_set_brightness(int v) { (void)v; }
 void muse_settings_set_mic_gain(int v) { (void)v; }
 void muse_settings_set_sleep_s(int v) { (void)v; }
+void muse_settings_set_always_on(bool v) { (void)v; }
 void muse_settings_set_ble_on(bool v) { (void)v; }
 void muse_settings_set_wifi_on(bool v) { (void)v; }
 size_t muse_sim_strlcpy(char *dst, const char *src, size_t cap)

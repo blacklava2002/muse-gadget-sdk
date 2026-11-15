@@ -158,6 +158,17 @@ void muse_settings_set_brightness(int pct)
     sim_services_set_brightness(pct);
 }
 
+/* The simulator has no USB or battery; Always on stays off and auto-sleep at its default. */
+bool muse_settings_always_on(void)
+{
+    return false;
+}
+
+int muse_settings_sleep_s(void)
+{
+    return 120;
+}
+
 void muse_settings_set_speaker_on(bool on)
 {
     sim_services_set_speaker(on);

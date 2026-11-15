@@ -1384,6 +1384,11 @@ static void on_sleep_choice(lv_event_t *e)
     tick_sleep();
 }
 
+static void on_always_on_sw(lv_event_t *e)
+{
+    muse_settings_set_always_on(lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED));
+}
+
 static void on_sleep_now(lv_event_t *e)
 {
     (void)e;
@@ -1401,6 +1406,7 @@ static void build_sleep_page(lv_obj_t *tile)
                               (void *)(intptr_t)i);
         lv_obj_set_style_text_color(s_sleep_checks[i], lv_color_hex(COLOR_ACCENT), 0);
     }
+    switch_row(list, "Always on (USB)", muse_settings_always_on(), on_always_on_sw);
     button(list, LV_SYMBOL_EYE_CLOSE "  Sleep now", COLOR_ACCENT, on_sleep_now, NULL);
     note(list, "Tap the screen or press either button to wake.");
 }
