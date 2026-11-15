@@ -94,6 +94,20 @@
     </section>
 
     <section>
+      <h2>Agent</h2>
+      <p class="dim">Who answers your voice notes: Muse, or a webhook of your own (firmware with
+        CONFIG_MUSE_WEBHOOK). Live calls stay with Muse.</p>
+      <label for="backend">Answered by</label>
+      <select id="backend"><option value="muse">Muse</option><option value="webhook">My webhook</option></select>
+      <label for="hook-url">Webhook URL <span class="dim">(https://..., leave empty to keep the current one)</span></label>
+      <input id="hook-url" type="url" autocomplete="off" maxlength="255" placeholder="https://agent.example.com/gadget">
+      <label for="hook-token">Bearer token <span class="dim">(optional; leave empty to keep the current one)</span></label>
+      <input id="hook-token" type="password" autocomplete="off" maxlength="1023">
+      <button id="hook-save">Save</button>
+      <button id="hook-test" class="secondary">Test webhook</button>
+    </section>
+
+    <section>
       <h2>Sound &amp; sleep</h2>
       <label>Volume <span id="volume-v"></span></label>
       <input id="volume" type="range" min="0" max="100">
@@ -147,6 +161,7 @@ async function refresh() {
   $('status').innerHTML =
     `Wi-Fi: <b>${w.on ? w.state : 'off'}</b>${w.ssid ? ` (${esc(w.ssid)}${w.ip ? `, ${w.ip}` : ''})` : ''}<br>` +
     `Muse: <b>${esc(h.state)}</b> · token ${h.token ? 'set' : 'not set'}<br>` +
+    (s.agent ? `Agent: <b>${s.agent === 'webhook' ? 'webhook' : 'Muse'}</b><br>` : '') +
     (s.battery >= 0 ? `Battery ${s.battery}%` : 'Battery: n/a');
   if (document.activeElement !== $('ssid') && !$('ssid').value) $('ssid').value = w.ssid;
   if (document.activeElement !== $('host')) $('host').value = h.host;
@@ -156,6 +171,7 @@ async function refresh() {
   setRange('mic', s.mic_gain, v => `${v} dB`);
   setRange('bright', s.brightness, v => `${v}%`);
   $('sleep').value = String(s.sleep);
+  if (s.agent && document.activeElement !== $('backend')) $('backend').value = s.agent;
 }
 
 function setRange(id, v, fmt) {
@@ -221,6 +237,26 @@ $('hatch-save').onclick = async () => {
   $('token').value = '';
 };
 $('hatch-test').onclick = () => send('hatch.test');
+
+// Values longer than one write go in pieces: the first sets, "+" appends.
+function sendLong(cmd, value) {
+  for (let i = 0; i < value.length; i += TOKEN_CHUNK) {
+    send(i ? cmd + '+' : cmd, value.slice(i, i + TOKEN_CHUNK));
+  }
+}
+$('backend').onchange = () => send('backend', $('backend').value);
+$('hook-save').onclick = async () => {
+  const url = $('hook-url').value.trim();
+  if (url && !/^https?:\/\//.test(url)) { log('The URL must start with https:// or http://', 'bad'); return; }
+  if (url) sendLong('webhook.url', url);
+  const token = $('hook-token').value.trim();
+  if (token) sendLong('webhook.token', token);
+  send('backend', $('backend').value);
+  await queue;
+  $('hook-url').value = '';
+  $('hook-token').value = '';
+};
+$('hook-test').onclick = () => send('webhook.test');
 
 for (const [id, cmd, fmt] of [['volume', 'volume', v => `${v}%`], ['mic', 'mic_gain', v => `${v} dB`],
                               ['bright', 'brightness', v => `${v}%`]]) {

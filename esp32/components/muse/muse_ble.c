@@ -27,6 +27,10 @@
 #include "host/ble_store.h"
 
 #include "muse_chat.h"
+#include "sdkconfig.h"
+#if CONFIG_MUSE_WEBHOOK
+#include "muse_backend.h"
+#endif
 #include "muse_link.h"
 #include "muse_settings.h"
 #include "muse_state.h"
@@ -90,16 +94,22 @@ static int build_status(char *out, size_t len)
     json_str(vm_e, sizeof(vm_e), vm);
     json_str(last_e, sizeof(last_e), s_last);
 
+#if CONFIG_MUSE_WEBHOOK
+    /* Kept short: a BLE attribute holds at most 512 bytes. */
+    const char *agent = muse_backend_webhook() ? "\"agent\":\"webhook\"," : "\"agent\":\"muse\",";
+#else
+    const char *agent = "";
+#endif
     return snprintf(out, len,
                     "{\"name\":\"%s\",\"fw\":\"%s\",\"battery\":%d,"
                     "\"wifi\":{\"on\":%s,\"state\":\"%s\",\"ssid\":\"%s\",\"ip\":\"%s\",\"rssi\":%d},"
                     "\"hatch\":{\"host\":\"%s\",\"vm\":\"%s\",\"token\":%s,\"state\":\"%s\"},"
-                    "\"link\":{\"paired\":%s,\"state\":\"%s\"},"
+                    "%s\"link\":{\"paired\":%s,\"state\":\"%s\"},"
                     "\"volume\":%d,\"speaker\":%s,\"mic_gain\":%d,\"brightness\":%d,\"sleep\":%d,\"last\":\"%s\"}",
                     s_name, esp_app_get_description()->version, p.battery_pct,
                     muse_settings_wifi_on() ? "true" : "false", wifi_state_name(w.state), ssid_e, w.ip, w.rssi,
                     host_e, vm_e, muse_settings_hatch_token_len() ? "true" : "false", muse_hatch_state_name(h.state),
-                    muse_link_hatch_linked() ? "true" : "false", muse_link_state_name(muse_link_state()),
+                    agent, muse_link_hatch_linked() ? "true" : "false", muse_link_state_name(muse_link_state()),
                     muse_settings_volume(), muse_settings_speaker_on() ? "true" : "false",
                     muse_settings_mic_gain(), muse_settings_brightness(),
                     muse_settings_sleep_s(), last_e);
@@ -130,6 +140,7 @@ static void run_command(char *cmd)
     }
     int n;
     const char *res = "ok";
+    bool hook_secret = false;
 
     if (!strcmp(cmd, "wifi.ssid")) {
         strlcpy(s_pending_ssid, v, sizeof(s_pending_ssid));
@@ -159,6 +170,10 @@ static void run_command(char *cmd)
         }
     } else if (!strcmp(cmd, "hatch.test")) {
         muse_hatch_test();
+#if CONFIG_MUSE_WEBHOOK
+    } else if (muse_backend_command(cmd, v, &res, &hook_secret)) {
+        /* backend=, webhook.url=, webhook.token=, webhook.test */
+#endif
     } else if (!strcmp(cmd, "test.loopback")) {
         muse_voice_request_loopback();
     } else if (!strcmp(cmd, "volume") && parse_int(v, 0, 100, &n)) {
@@ -176,7 +191,7 @@ static void run_command(char *cmd)
     }
 
     /* Never echo secrets back. */
-    bool secret = !strcmp(cmd, "wifi.pass") || !strncmp(cmd, "hatch.token", 11);
+    bool secret = !strcmp(cmd, "wifi.pass") || !strncmp(cmd, "hatch.token", 11) || hook_secret;
     snprintf(s_last, sizeof(s_last), "%s: %s", cmd, res);
     ESP_LOGI(TAG, "cmd %s%s%s -> %s", cmd, secret ? "" : "=", secret ? "" : v, res);
     muse_state_poke();

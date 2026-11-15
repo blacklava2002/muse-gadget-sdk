@@ -515,6 +515,42 @@ menu "Muse"
             played for the idle limit, or at the length limit. Muse's VM
             has to accept voice calls from this gadget's credentials.
 
+    config MUSE_WEBHOOK
+        bool "Webhook backend: answer voice notes with an agent of your own"
+        depends on MUSE_HATCH && !MUSE_BOARD_SENSECAP_WATCHER
+        default y
+        help
+            Adds a second backend beside Muse, chosen at run time in
+            Settings > Muse (Agent), over Bluetooth or on the serial console
+            (backend=webhook / backend=muse). With the webhook chosen, each
+            voice note is POSTed as a 16 kHz WAV to a URL you set
+            (webhook.url=...), with an optional bearer token
+            (webhook.token=...), and the reply comes back as JSON, NDJSON
+            events or an audio file, with optional speech (MP3, WAV or PCM).
+            Live calls stay Muse-only. Muse remains the default until you
+            switch. The contract is in docs/webhook.md; tools/webhook/ has
+            a small reference receiver.
+
+if MUSE_WEBHOOK
+
+    config MUSE_WEBHOOK_TIMEOUT_S
+        int "Seconds to wait for the webhook's reply"
+        range 10 600
+        default 90
+        help
+            How long a turn waits for the reply to start, and between
+            pieces of a streamed reply. Agents that think a while need more.
+
+    config MUSE_WEBHOOK_MAX_NOTE_S
+        int "Longest voice note kept for the webhook, in seconds"
+        range 5 120
+        default 30
+        help
+            The note is held in PSRAM (32 KB a second) and sent on release.
+            Recording itself still stops at the voice task's own limit.
+
+endif
+
     config MUSE_VOICE_NOTE_TOGGLE
         bool "Press once to record a voice note, press again to send"
         depends on MUSE_ENABLED && !MUSE_REALTIME_VOICE

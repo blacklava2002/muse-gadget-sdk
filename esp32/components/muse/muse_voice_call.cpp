@@ -66,6 +66,9 @@
 #include "sdkconfig.h"
 
 #include "muse_chat_priv.h"
+#if CONFIG_MUSE_WEBHOOK
+#include "muse_backend.h"
+#endif
 #include "muse_voice_call.h"
 #include "muse_voice_call_core.h"
 #include "muse_voice_call_priv.h"
@@ -1396,6 +1399,11 @@ static uint32_t publish_start(bool ptt)
 
 extern "C" bool muse_voice_call_ready(void)
 {
+#if CONFIG_MUSE_WEBHOOK
+    if (muse_backend_webhook()) {
+        return false;   /* calls are Muse's; with the webhook a hold sends a note */
+    }
+#endif
     return s_inited && muse_hatch_ready();
 }
 

@@ -33,6 +33,9 @@
 #include "muse_ble.h"
 #include "muse_board.h"
 #include "muse_chat.h"
+#if CONFIG_MUSE_WEBHOOK
+#include "muse_backend.h"
+#endif
 #include "muse_input.h"
 #include "muse_keypad.h"
 #include "muse_link.h"
@@ -110,6 +113,9 @@ static char s_join_ssid[MUSE_SSID_MAX + 1];
 
 /* Hatch page. */
 static lv_obj_t *s_hatch_status, *s_hatch_host, *s_hatch_vm, *s_hatch_token, *s_hatch_sdk_token;
+#if CONFIG_MUSE_WEBHOOK
+static lv_obj_t *s_agent, *s_hook_url, *s_hook_token;
+#endif
 static lv_obj_t *s_link_status, *s_link_reset_lbl;
 static int64_t s_link_reset_armed_us;
 static int64_t s_sdk_token_bad_us;   /* when an invalid SDK token was entered */
@@ -1110,6 +1116,45 @@ static void on_hatch_test(lv_event_t *e)
     muse_hatch_test();
 }
 
+#if CONFIG_MUSE_WEBHOOK
+/* Agent: who answers a note, Muse or your own webhook (muse_backend.h). */
+static void on_agent(lv_event_t *e)
+{
+    (void)e;
+    muse_backend_set(muse_backend_webhook() ? MUSE_BACKEND_MUSE : MUSE_BACKEND_WEBHOOK);
+}
+
+static void on_hook_url_done(const char *text)
+{
+    if (!text[0] || !strncmp(text, "https://", 8) || !strncmp(text, "http://", 7)) {
+        muse_webhook_set_url(text, false);
+    }
+}
+
+static void on_hook_token_done(const char *text)
+{
+    if (text[0]) {
+        muse_webhook_set_token(text, false);
+    }
+}
+
+static void on_hook_url(lv_event_t *e)
+{
+    (void)e;
+    static char url[MUSE_WEBHOOK_URL_MAX + 1];
+    muse_webhook_url(url);
+    open_text("Webhook URL", url[0] ? url : "https://", false, MUSE_WEBHOOK_URL_MAX, "https://...",
+              on_hook_url_done, s_hatch);
+}
+
+static void on_hook_token(lv_event_t *e)
+{
+    (void)e;
+    open_text("Webhook token", "", true, MUSE_WEBHOOK_TOKEN_MAX, "Empty keeps the current one", on_hook_token_done,
+              s_hatch);
+}
+#endif
+
 /* Two taps within a few seconds: this wipes Wi-Fi and the Muse app pairing. */
 static void on_link_reset(lv_event_t *e)
 {
@@ -1132,6 +1177,11 @@ static void build_hatch_page(lv_obj_t *tile)
     s_link_status = note(list, "");
     button(list, "Reset pairing", COLOR_DANGER, on_link_reset, &s_link_reset_lbl);
     s_hatch_status = note(list, "");
+#if CONFIG_MUSE_WEBHOOK
+    row(list, NULL, "Agent", &s_agent, on_agent, NULL);
+    row(list, NULL, "Webhook URL", &s_hook_url, on_hook_url, NULL);
+    row(list, NULL, "Webhook token", &s_hook_token, on_hook_token, NULL);
+#endif
     row(list, NULL, "Server", &s_hatch_host, on_hatch_host, NULL);
     row(list, NULL, "VM ID", &s_hatch_vm, on_hatch_vm, NULL);
     row(list, NULL, "Device token", &s_hatch_token, on_hatch_token, NULL);
@@ -1141,6 +1191,10 @@ static void build_hatch_page(lv_obj_t *tile)
                "easier to send over Bluetooth. The VM ID picks one of your VMs. The SDK token is from "
                "gadgets.muse.ai; one set here replaces the firmware's. "
                "Reset pairing forgets Wi-Fi and the app pairing, then restarts.");
+#if CONFIG_MUSE_WEBHOOK
+    note(list, "Agent picks who answers your notes: Muse, or a webhook of your own (any agent behind a URL, "
+               "such as a Cloudflare Tunnel). Live calls are Muse's only. Test connection checks the one chosen.");
+#endif
 }
 
 static void tick_hatch(void)
@@ -1164,6 +1218,25 @@ static void tick_hatch(void)
     } else {
         strlcpy(buf, muse_hatch_state_name(h.state), sizeof(buf));
     }
+#if CONFIG_MUSE_WEBHOOK
+    if (muse_backend_webhook()) {
+        /* The status above is the webhook's now (muse_hatch_status). */
+        char shown[80];
+        snprintf(shown, sizeof(shown), "Webhook: %s", buf);
+        strlcpy(buf, shown, sizeof(buf));
+    }
+    set_text(s_agent, muse_backend_webhook() ? "Webhook (tap for Muse)" : "Muse (tap for webhook)");
+    {
+        /* Host only: a path or query can hold a key. */
+        static char url[MUSE_WEBHOOK_URL_MAX + 1];
+        muse_webhook_url(url);
+        char *host = strstr(url, "://");
+        host = host ? host + 3 : url;
+        host[strcspn(host, "/?#")] = '\0';
+        set_text(s_hook_url, url[0] ? host : "Not set");
+    }
+    set_text(s_hook_token, muse_webhook_token_len() ? "Set" : "Not set");
+#endif
     set_text(s_hatch_status, buf);
     lv_obj_set_style_text_color(s_hatch_status, lv_color_hex(h.state == MUSE_HATCH_REACHABLE ? COLOR_OK :
                                                              h.state == MUSE_HATCH_UNREACHABLE ? COLOR_WARN : COLOR_DIM), 0);

@@ -38,6 +38,9 @@
 #include "muse_settings.h"
 #include "muse_state.h"
 #include "muse_wifi.h"
+#if CONFIG_MUSE_WEBHOOK
+#include "muse_backend.h"
+#endif
 #if CONFIG_MUSE_REALTIME_VOICE
 #include "muse_voice_call.h"
 #include "muse_voice_call_core.h"
@@ -105,6 +108,11 @@ bool muse_voice_ptt_call(void) { return muse_voice_in_call() && atomic_load(&s_p
 bool muse_voice_ptt_enabled(void)
 {
 #if CONFIG_MUSE_BOARD_M5STACK_STOPWATCH && CONFIG_MUSE_REALTIME_VOICE
+#if CONFIG_MUSE_WEBHOOK
+    if (muse_backend_webhook()) {
+        return false;   /* a webhook takes notes only: the button records one */
+    }
+#endif
     return !muse_settings_voice_notes();
 #else
     return false;
@@ -637,6 +645,15 @@ static const char *not_ready_reason(void)
 {
     muse_hatch_status_t st;
     muse_hatch_status(&st);
+#if CONFIG_MUSE_WEBHOOK
+    if (muse_backend_webhook()) {
+        switch (st.state) {
+        case MUSE_HATCH_NOT_SET: return "SET A WEBHOOK URL FIRST";
+        case MUSE_HATCH_OFFLINE: return "NO WI-FI";
+        default: return "CAN'T REACH THE WEBHOOK";
+        }
+    }
+#endif
     switch (st.state) {
     case MUSE_HATCH_NOT_SET: return "SET UP MUSE FIRST";
     case MUSE_HATCH_OFFLINE: return "NO WI-FI";

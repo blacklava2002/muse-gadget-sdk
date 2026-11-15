@@ -53,6 +53,10 @@ if(CONFIG_MUSE_ENABLED)
         if(CONFIG_MUSE_REALTIME_VOICE)
             list(APPEND srcs "muse_voice_call.cpp" "muse_voice_call_core.c")
         endif()
+        if(CONFIG_MUSE_WEBHOOK)
+            # Your own agent over HTTP(S), beside Muse (muse_backend.h).
+            list(APPEND srcs "muse_backend.c" "muse_chat_webhook.c" "muse_webhook_proto.c")
+        endif()
     else()
         list(APPEND srcs "muse_chat_link.c")   # text replies over Link's session
     endif()
@@ -233,6 +237,17 @@ idf_component_register(
     REQUIRES esp_driver_gpio esp_driver_i2c
     PRIV_REQUIRES ${muse_priv_requires}
 )
+
+if(CONFIG_MUSE_ENABLED AND CONFIG_MUSE_HATCH AND CONFIG_MUSE_WEBHOOK)
+    # Muse's own session answers as muse_hatch_vm_*; muse_backend.c owns the
+    # public muse_hatch_* names and picks Muse or the webhook per turn.
+    set(muse_vm_srcs "muse_chat.c" "muse_chat_session.cpp")
+    if(CONFIG_MUSE_REALTIME_VOICE)
+        list(APPEND muse_vm_srcs "muse_voice_call.cpp")
+    endif()
+    set_source_files_properties(${muse_vm_srcs} PROPERTIES
+        COMPILE_OPTIONS "-include;${COMPONENT_DIR}/muse_backend_rename.h")
+endif()
 
 if(CONFIG_MUSE_ENABLED AND custom_avatar)
     # The custom avatar's grid (avatar/muse_avatar_grid.h) reaches muse_pixel.h
