@@ -29,6 +29,7 @@
 #endif
 
 #include "muse_audio.h"
+#include "muse_avatar_switch.h"
 #include "muse_battery.h"
 #include "muse_ble.h"
 #include "muse_board.h"
@@ -82,7 +83,7 @@ static int s_text_scale = 466;
 static bool s_tiny;   /* round and under 300 px: see TINY_LIST_W */
 static lv_obj_t *s_tile;
 static lv_obj_t *s_current;
-static lv_obj_t *s_home, *s_wifi, *s_hatch, *s_ble, *s_sound, *s_sleep, *s_battery, *s_power, *s_text;
+static lv_obj_t *s_home, *s_wifi, *s_hatch, *s_ble, *s_sound, *s_sleep, *s_battery, *s_power, *s_avatar, *s_text;
 
 /*
  * Only home is kept. A sub-page is built when it opens and deleted on the way
@@ -95,7 +96,7 @@ typedef struct {
 } page_t;
 
 /* Home values. */
-static lv_obj_t *s_home_wifi, *s_home_hatch, *s_home_pushes, *s_home_ble, *s_home_sound, *s_home_sleep, *s_home_battery, *s_about;
+static lv_obj_t *s_home_wifi, *s_home_hatch, *s_home_pushes, *s_home_ble, *s_home_sound, *s_home_sleep, *s_home_battery, *s_home_avatar, *s_about;
 #if CONFIG_MUSE_VIDEO
 static lv_obj_t *s_home_camera;
 #endif
@@ -1520,6 +1521,39 @@ static void tick_sleep(void)
     s_sleep_shown = cur;
 }
 
+/* ---------- Avatar ---------- */
+
+static lv_obj_t *s_avatar_checks[MUSE_AVATAR_COUNT];
+
+static void tick_avatar(void);
+
+static void on_avatar_choice(lv_event_t *e)
+{
+    muse_pixel_set_avatar((int)(intptr_t)lv_event_get_user_data(e));
+    tick_avatar();
+}
+
+static void build_avatar_page(lv_obj_t *tile)
+{
+    lv_obj_t *list;
+    s_avatar = page(tile, "AVATAR", true, &list);
+    note(list, "Who should be on screen:");
+    for (int i = 0; i < MUSE_AVATAR_COUNT; i++) {
+        row(list, NULL, muse_avatar_names[i], &s_avatar_checks[i], on_avatar_choice,
+            (void *)(intptr_t)i);
+        lv_obj_set_style_text_color(s_avatar_checks[i], lv_color_hex(COLOR_ACCENT), 0);
+    }
+    note(list, "The face changes right away and is remembered.");
+}
+
+static void tick_avatar(void)
+{
+    int cur = muse_pixel_avatar();
+    for (int i = 0; i < MUSE_AVATAR_COUNT; i++) {
+        set_text(s_avatar_checks[i], i == cur ? LV_SYMBOL_OK : "");
+    }
+}
+
 /* ---------- Battery ---------- */
 
 /*
@@ -1615,6 +1649,7 @@ static const page_t BLE = { &s_ble, build_ble_page };
 static const page_t SOUND = { &s_sound, build_sound_page };
 static const page_t SLEEP = { &s_sleep, build_sleep_page };
 static const page_t BATTERY = { &s_battery, build_battery_page };
+static const page_t AVATAR = { &s_avatar, build_avatar_page };
 static const page_t POWER = { &s_power, build_power_page };
 
 /* Off (the default): only replies to the talk button are played, and the
@@ -1647,6 +1682,7 @@ static void build_home(lv_obj_t *tile)
     }
     row(list, LV_SYMBOL_EYE_CLOSE, "Sleep", &s_home_sleep, on_nav, (void *)&SLEEP);
     row(list, LV_SYMBOL_BATTERY_FULL, "Battery", &s_home_battery, on_nav, (void *)&BATTERY);
+    row(list, LV_SYMBOL_EYE_OPEN, "Avatar", &s_home_avatar, on_nav, (void *)&AVATAR);
 #if CONFIG_MUSE_VIDEO
     if (muse_video_supported()) {
         row(list, LV_SYMBOL_VIDEO, "Phone camera", &s_home_camera, on_camera, NULL);
@@ -1683,6 +1719,7 @@ static void tick_home(void)
         set_text(s_home_sound, "Muted");
     }
     set_text(s_home_sleep, sleep_name(muse_settings_sleep_s()));
+    set_text(s_home_avatar, muse_avatar_names[muse_pixel_avatar()]);
     bool pushes = muse_settings_pushes_on();
     if (pushes != lv_obj_has_state(s_home_pushes, LV_STATE_CHECKED)) {
         lv_obj_set_state(s_home_pushes, LV_STATE_CHECKED, pushes);
@@ -1725,7 +1762,7 @@ static volatile int s_bench_open = -1;   /* applied in the LVGL task, by the nex
 
 bool muse_settings_ui_bench_open(const char *name)
 {
-    static const char *const NAMES[] = { "home", "wifi", "muse", "ble", "sound", "sleep", "battery", "power" };
+    static const char *const NAMES[] = { "home", "wifi", "muse", "ble", "sound", "sleep", "battery", "power", "avatar" };
     for (int i = 0; i < (int)(sizeof(NAMES) / sizeof(NAMES[0])); i++) {
         if (!strcmp(name, NAMES[i])) {
             s_bench_open = i;
@@ -1737,7 +1774,7 @@ bool muse_settings_ui_bench_open(const char *name)
 
 static void bench_open_pending(void)
 {
-    static const page_t *const PAGES[] = { NULL, &WIFI, &HATCH, &BLE, &SOUND, &SLEEP, &BATTERY, &POWER };
+    static const page_t *const PAGES[] = { NULL, &WIFI, &HATCH, &BLE, &SOUND, &SLEEP, &BATTERY, &POWER, &AVATAR };
     int i = s_bench_open;
     if (i < 0) {
         return;
@@ -1786,6 +1823,8 @@ void muse_settings_ui_tick(bool visible)
         tick_sleep();
     } else if (s_current == s_battery) {
         tick_battery();
+    } else if (s_current == s_avatar) {
+        tick_avatar();
     }
 }
 

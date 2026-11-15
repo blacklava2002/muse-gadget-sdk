@@ -64,6 +64,8 @@ int muse_settings_sleep_s(void);        /* 0 = never */
 /* Always on (USB): no auto-sleep while on USB power; on battery, auto-sleep as
  * usual. Left idle, the screen dims and drifts a little (muse_ui.c). */
 bool muse_settings_always_on(void);
+/* Which avatar the switcher shows (index into muse_avatar_names). */
+int muse_settings_avatar(void);
 /* Reply text size on small screens with full-screen replies. */
 enum { MUSE_TEXT_SMALL, MUSE_TEXT_MEDIUM, MUSE_TEXT_LARGE };
 int muse_settings_text_size(void);
@@ -86,6 +88,7 @@ void muse_settings_set_mic_gain(int db);
 void muse_settings_set_brightness(int pct);
 void muse_settings_set_sleep_s(int secs);
 void muse_settings_set_always_on(bool on);
+void muse_settings_set_avatar(int idx);
 void muse_settings_set_text_size(int size);
 void muse_settings_set_wifi_on(bool on);
 void muse_settings_set_ble_on(bool on);

@@ -41,6 +41,7 @@ static struct {
     uint8_t brightness;
     uint16_t sleep_s;
     bool always_on;
+    uint8_t avatar;
     uint8_t text_size;
     bool wifi_on;
     bool ble_on;
@@ -141,6 +142,10 @@ esp_err_t muse_settings_init(void)
         s.always_on = b;
     }
     load_u8("text_size", &s.text_size);
+    load_u8("avatar", &s.avatar);
+    if (s.avatar >= 5) {
+        s.avatar = 0;
+    }
     if (nvs_get_u8(s_nvs, "wifi_on", &b) == ESP_OK) {
         s.wifi_on = b;
     }
@@ -177,6 +182,7 @@ int muse_settings_mic_gain(void) { return s.mic_gain; }
 int muse_settings_brightness(void) { return s.brightness; }
 int muse_settings_sleep_s(void) { return s.sleep_s; }
 bool muse_settings_always_on(void) { return s.always_on; }
+int muse_settings_avatar(void) { return s.avatar; }
 int muse_settings_text_size(void) { return s.text_size; }
 bool muse_settings_wifi_on(void) { return s.wifi_on; }
 bool muse_settings_ble_on(void) { return s.ble_on; }
@@ -273,6 +279,12 @@ void muse_settings_set_always_on(bool on)
     s.always_on = on;
     save_u8("always_on", on);
     notify(MUSE_SETTING_SLEEP);
+}
+
+void muse_settings_set_avatar(int idx)
+{
+    s.avatar = (idx >= 0 && idx < 5) ? idx : 0;
+    save_u8("avatar", s.avatar);   /* the switcher polls it */
 }
 
 void muse_settings_set_text_size(int size)
