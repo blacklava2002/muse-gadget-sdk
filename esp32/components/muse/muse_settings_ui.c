@@ -1221,7 +1221,7 @@ static void tick_hatch(void)
 #if CONFIG_MUSE_WEBHOOK
     if (muse_backend_webhook()) {
         /* The status above is the webhook's now (muse_hatch_status). */
-        char shown[80];
+        char shown[112];  /* "Webhook: " + a full buf: snprintf cannot truncate */
         snprintf(shown, sizeof(shown), "Webhook: %s", buf);
         strlcpy(buf, shown, sizeof(buf));
     }
