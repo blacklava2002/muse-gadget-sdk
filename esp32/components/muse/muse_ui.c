@@ -20,10 +20,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_netif_sntp.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "lvgl.h"
@@ -178,6 +180,10 @@ static lv_obj_t *s_state_lbl;
 static lv_obj_t *s_name_lbl;    /* this gadget's own name, to tell it from the next one */
 static lv_obj_t *s_power_lbl;
 static lv_obj_t *s_caption_lbl;
+static lv_obj_t *s_clock_lbl;   /* desk-watch clock, lives in the caption band */
+static char s_clock_text[16];
+static bool s_clock_vis;
+static bool s_sntp_started;
 static lv_obj_t *s_reply_lbl;   /* full layout: the reply's page while answering */
 #if CONFIG_MUSE_BOARD_SENSECAP_WATCHER
 static lv_obj_t *s_review_position;
@@ -1368,6 +1374,10 @@ static void build_screen(void)
     lv_obj_set_flag(s_name_lbl, LV_OBJ_FLAG_HIDDEN, s_small && !s_tall && s_h < 200);
 
     s_caption_lbl = make_label(face, font_pick(caption_font(), &lv_font_unscii_8), COLOR_CAPTION);
+    s_clock_lbl = make_label(face, &lv_font_unscii_16, COLOR_CAPTION);
+    lv_obj_set_size(s_clock_lbl, 220, lv_font_get_line_height(&lv_font_unscii_16));
+    lv_obj_align(s_clock_lbl, LV_ALIGN_BOTTOM_MID, 0, -33);
+    lv_obj_add_flag(s_clock_lbl, LV_OBJ_FLAG_HIDDEN);
     if (s_small) {
         /* Two lines over the bottom of the face, on a dark band so they stay
          * legible. A tall screen has room to keep them above the mic icon. */
@@ -2105,6 +2115,41 @@ static const char *idle_name(muse_wifi_state_t wifi)
     }
 }
 
+
+/* Desk-watch clock: SNTP over the gadget's own Wi-Fi, US Eastern time.
+ * It lives in the caption band at the bottom of the face and yields to
+ * captions and to any activity: it is an idle-glance watch, nothing more. */
+static void update_clock(bool wifi_connected)
+{
+    if (wifi_connected && !s_sntp_started) {
+        s_sntp_started = true;
+        esp_sntp_config_t cfg = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+        cfg.wait_for_sync = false;   /* never block the UI on an NTP answer */
+        esp_err_t err = esp_netif_sntp_init(&cfg);
+        if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+            ESP_LOGW("muse_ui", "sntp init: %s", esp_err_to_name(err));
+        }
+    }
+    time_t t = time(NULL);
+    bool synced = t > 1700000000;   /* before that, time() is uptime-era fiction */
+    bool show = synced && lv_label_get_text(s_caption_lbl)[0] == '\0' && muse_state_mode(NULL) == MUSE_MODE_IDLE;
+    char buf[16] = "";
+    if (show) {
+        struct tm tmv;
+        localtime_r(&t, &tmv);
+        strftime(buf, sizeof(buf), "%I:%M %p", &tmv);
+        if (buf[0] == '0') memmove(buf, buf + 1, strlen(buf));   /* "8:29 AM", not "08:29 AM" */
+    }
+    if (show != s_clock_vis) {
+        s_clock_vis = show;
+        lv_obj_set_flag(s_clock_lbl, LV_OBJ_FLAG_HIDDEN, !show);
+    }
+    if (show && strcmp(buf, s_clock_text) != 0) {
+        snprintf(s_clock_text, sizeof(s_clock_text), "%s", buf);
+        lv_label_set_text(s_clock_lbl, buf);
+    }
+}
+
 static void update_chrome(float now)
 {
     if (now < s_next_settings_tick) {
@@ -2138,6 +2183,7 @@ static void update_chrome(float now)
         lv_label_set_text(s_wifi_icon, wifi);
     }
     s_idle_name = idle_name(w.state);
+    update_clock(w.state == MUSE_WIFI_CONNECTED);
     muse_ble_status_t b;
     muse_ble_status(&b);
     const char *ble = b.state != MUSE_BLE_OFF ? LV_SYMBOL_BLUETOOTH : "";
@@ -2647,6 +2693,8 @@ esp_err_t muse_ui_start(void)
 {
     s_w = muse_board->width;
     s_h = muse_board->height;
+    setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0/2", 1);   /* Sean is US Eastern */
+    tzset();
     /* The full layout assumes room for the 466 px board's header and bottom
      * captions. Short landscape panels (BOX-3, and 480x320, where the full
      * layout's status line would sit above the screen) need the compact
