@@ -81,7 +81,8 @@ CONFIG_ESP_TASK_WDT_TIMEOUT_S=20
 CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y
 CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
 
-# Live voice calls: Sean chose PTT-only on the 1.8 (Nov 13, 2026) -- live
-# calls stalled/hung up on turns where the agent does slow work. The
-# Kconfig default is already n; this pins the decision for this board.
-# CONFIG_MUSE_REALTIME_VOICE is not set
+# Live voice calls: TRIAL on this board only (Sean, Nov 16, 2026). The
+# 1.8 stays PTT-only per his Nov 13 decision (calls stalled/hung up on
+# turns where the agent does slow work). Flip back to "is not set" to
+# end the trial.
+CONFIG_MUSE_REALTIME_VOICE=y
