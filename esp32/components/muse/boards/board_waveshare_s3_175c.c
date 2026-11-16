@@ -33,6 +33,8 @@
 #include "esp_lcd_panel_io.h"
 #include "esp_log.h"
 #include "esp_lv_adapter.h"
+#include "driver/i2s_std.h"
+#include "esp_codec_dev_defaults.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -217,10 +219,96 @@ static void display_pause(bool pause)
     }
 }
 
+/*
+ * Audio, hand-rolled instead of bsp_audio_codec_speaker/microphone_init.
+ * The BSP creates its I2S channels with the IDF default DMA sizing
+ * (6 descriptors x 240 frames) under a 22050 Hz mono slot config, so every
+ * codec open reconfigures both channels and reallocates their DMA buffers.
+ * This board's DMA pool runs too dry for that realloc: on battery boots it
+ * failed, and the codec driver's error path then dereferenced the missing
+ * buffer and panic-looped the gadget (Nov 16, 2026). Same medicine as the
+ * 1.8 board file: create the channels here with a small DMA footprint
+ * (3 x 128) and the final 16 kHz stereo config up front, then build the
+ * same ES8311 + ES7210 codec devices the BSP would have.
+ */
 static esp_err_t audio_init(esp_codec_dev_handle_t *spk, esp_codec_dev_handle_t *mic)
 {
-    *spk = bsp_audio_codec_speaker_init();
-    *mic = bsp_audio_codec_microphone_init();
+    *spk = NULL;
+    *mic = NULL;
+
+    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(CONFIG_BSP_I2S_NUM, I2S_ROLE_MASTER);
+    chan_cfg.dma_desc_num = 3;
+    chan_cfg.dma_frame_num = 128;
+    chan_cfg.auto_clear = true;
+    i2s_chan_handle_t tx = NULL, rx = NULL;
+    ESP_RETURN_ON_ERROR(i2s_new_channel(&chan_cfg, &tx, &rx), TAG, "i2s channels");
+
+    i2s_std_config_t std_cfg = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(16000),
+        .slot_cfg = I2S_STD_PHILIP_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
+        .gpio_cfg = {
+            .mclk = BSP_I2S_MCLK,
+            .bclk = BSP_I2S_SCLK,
+            .ws = BSP_I2S_LCLK,
+            .dout = BSP_I2S_DOUT,
+            .din = BSP_I2S_DSIN,
+            .invert_flags = { .mclk_inv = false, .bclk_inv = false, .ws_inv = false },
+        },
+    };
+    ESP_RETURN_ON_ERROR(i2s_channel_init_std_mode(tx, &std_cfg), TAG, "i2s tx std");
+    ESP_RETURN_ON_ERROR(i2s_channel_init_std_mode(rx, &std_cfg), TAG, "i2s rx std");
+    ESP_RETURN_ON_ERROR(i2s_channel_enable(tx), TAG, "i2s tx enable");
+    ESP_RETURN_ON_ERROR(i2s_channel_enable(rx), TAG, "i2s rx enable");
+
+    audio_codec_i2s_cfg_t i2s_cfg = { .port = CONFIG_BSP_I2S_NUM, .rx_handle = rx, .tx_handle = tx };
+    const audio_codec_data_if_t *data_if = audio_codec_new_i2s_data(&i2s_cfg);
+    ESP_RETURN_ON_FALSE(data_if, ESP_FAIL, TAG, "i2s data if");
+
+    const audio_codec_gpio_if_t *gpio_if = audio_codec_new_gpio();
+
+    audio_codec_i2c_cfg_t spk_i2c = {
+        .port = BSP_I2C_NUM,
+        .addr = ES8311_CODEC_DEFAULT_ADDR,
+        .bus_handle = bsp_i2c_get_handle(),
+    };
+    const audio_codec_ctrl_if_t *spk_ctrl = audio_codec_new_i2c_ctrl(&spk_i2c);
+    ESP_RETURN_ON_FALSE(spk_ctrl, ESP_FAIL, TAG, "es8311 ctrl");
+
+    esp_codec_dev_hw_gain_t gain = { .pa_voltage = 5.0, .codec_dac_voltage = 3.3 };
+    es8311_codec_cfg_t es8311_cfg = {
+        .ctrl_if = spk_ctrl,
+        .gpio_if = gpio_if,
+        .codec_mode = ESP_CODEC_DEV_WORK_MODE_DAC,
+        .pa_pin = BSP_POWER_AMP_IO,
+        .pa_reverted = false,
+        .master_mode = false,
+        .use_mclk = true,
+        .digital_mic = false,
+        .invert_mclk = false,
+        .invert_sclk = false,
+        .hw_gain = gain,
+    };
+    const audio_codec_if_t *es8311 = es8311_codec_new(&es8311_cfg);
+    ESP_RETURN_ON_FALSE(es8311, ESP_FAIL, TAG, "es8311 new");
+
+    esp_codec_dev_cfg_t spk_cfg = { .dev_type = ESP_CODEC_DEV_TYPE_OUT, .codec_if = es8311, .data_if = data_if };
+    *spk = esp_codec_dev_new(&spk_cfg);
+
+    audio_codec_i2c_cfg_t mic_i2c = {
+        .port = BSP_I2C_NUM,
+        .addr = ES7210_CODEC_DEFAULT_ADDR,
+        .bus_handle = bsp_i2c_get_handle(),
+    };
+    const audio_codec_ctrl_if_t *mic_ctrl = audio_codec_new_i2c_ctrl(&mic_i2c);
+    ESP_RETURN_ON_FALSE(mic_ctrl, ESP_FAIL, TAG, "es7210 ctrl");
+
+    es7210_codec_cfg_t es7210_cfg = { .ctrl_if = mic_ctrl };
+    const audio_codec_if_t *es7210 = es7210_codec_new(&es7210_cfg);
+    ESP_RETURN_ON_FALSE(es7210, ESP_FAIL, TAG, "es7210 new");
+
+    esp_codec_dev_cfg_t mic_cfg = { .dev_type = ESP_CODEC_DEV_TYPE_IN, .codec_if = es7210, .data_if = data_if };
+    *mic = esp_codec_dev_new(&mic_cfg);
+
     return *spk && *mic ? ESP_OK : ESP_FAIL;
 }
 
