@@ -67,3 +67,21 @@ CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION=y
 # actually slept, and how long each power lock kept the chip awake.
 CONFIG_PM_LIGHT_SLEEP_CALLBACKS=y
 CONFIG_PM_PROFILING=y
+
+# --- Fork parity with the 1.8 board (Sean's rulings, carried over) ---
+# Watchdogs on (sdkconfig.defaults turns them off): a stuck task or
+# interrupt panics with a backtrace on the console and reboots, instead of
+# leaving the board dead until RST. Same values as the s3-18 overlay.
+CONFIG_ESP_INT_WDT=y
+CONFIG_ESP_INT_WDT_TIMEOUT_MS=800
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_INIT=y
+CONFIG_ESP_TASK_WDT_PANIC=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=20
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
+
+# Live voice calls: Sean chose PTT-only on the 1.8 (Nov 13, 2026) -- live
+# calls stalled/hung up on turns where the agent does slow work. The
+# Kconfig default is already n; this pins the decision for this board.
+# CONFIG_MUSE_REALTIME_VOICE is not set
