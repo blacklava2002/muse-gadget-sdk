@@ -37,6 +37,7 @@
 #include "freertos/task.h"
 
 #include "muse_board.h"
+#include "muse_imu.h"
 #include "muse_lcd_bands.h"
 #include "muse_mem.h"
 #include "muse_pmu.h"
@@ -77,6 +78,13 @@ static esp_err_t init(void)
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "PMU unavailable (%s): battery status disabled", esp_err_to_name(err));
         return ESP_OK;
+    }
+    /* Shake-to-dizzy: the QMI8658 is on this bus, same as the PMU. The
+     * 1.8's board file has always called this; this one never did, so the
+     * detector polled a device that was never opened. Best-effort: no
+     * IMU, no reaction, no failure. */
+    if (muse_imu_init(bsp_i2c_get_handle()) != ESP_OK) {
+        ESP_LOGW(TAG, "IMU unavailable: no shake reaction");
     }
 #if !CONFIG_MUSE_BOARD_WAVESHARE_S3_175
     /* PWR talks: the 10 s hold-off back on, whatever a reset in a held talk
