@@ -49,7 +49,11 @@
 #endif
 #include "muse_state.h"
 #include "muse_ui.h"
+#if CONFIG_MUSE_LATEST_REPLY
+#include "muse_latest_reply.h"
+#endif
 #include "muse_voice.h"
+#include "muse_wakeword_glue.h"
 #include "muse_wifi.h"
 #if CONFIG_MUSE_VIDEO
 #include "muse_video.h"
@@ -57,6 +61,9 @@
 #if CONFIG_MUSE_BOARD_SENSECAP_WATCHER
 #include "muse_review.h"
 #include "muse_wheel.h"
+#endif
+#if CONFIG_MUSE_APP_VIEW
+#include "muse_app_view.h"
 #endif
 #if CONFIG_MUSE_WATCHER_CAMERA
 #include "boards/watcher_camera.h"
@@ -701,6 +708,13 @@ static void power_release(void)
 {
     if (!s_power_down) return;
     s_power_down = false;
+#if CONFIG_MUSE_APP_VIEW
+    /* With an app open, the power key closes it instead of sleeping the screen. */
+    if (!s_power_swallow && muse_app_view_power()) {
+        s_power_swallow = false;
+        return;
+    }
+#endif
     if (!s_power_swallow) set_asleep(true, muse_board->power_button);
     s_power_swallow = false;
 }
@@ -779,6 +793,12 @@ static void input_task(void *arg)
             muse_video_close();
             ev &= ~(presses | MUSE_BTN_POWER_LONG);
         }
+#endif
+#if CONFIG_MUSE_APP_VIEW
+        /* An open app takes the talk, speaker and aux buttons; the power key still closes it.
+         * A toggled voice note that's recording keeps the talk key: its next press stops it. */
+        unsigned keep = NOTE_TOGGLED() ? ev & (MUSE_BTN_TALK_PRESS | MUSE_BTN_TALK_RELEASE) : 0;
+        ev = muse_app_view_buttons(ev & ~keep) | keep;
 #endif
         if (ev & (MUSE_BTN_TALK_PRESS | MUSE_BTN_TALK_RELEASE)) {
             ESP_LOGI(TAG, "talk key:%s%s", ev & MUSE_BTN_TALK_PRESS ? " press" : "",
@@ -1034,6 +1054,12 @@ static bool console_command(char *line, bool whole)
         return true;
     }
 #if LV_USE_SNAPSHOT
+#if CONFIG_MUSE_LATEST_REPLY
+    if (muse_latest_reply_bench(line)) {
+        set_asleep(false, "reply review");
+        return true;
+    }
+#endif
     if (!strcmp(line, "ui.demo=1") || !strcmp(line, "ui.demo=0")) {
         muse_ui_bench_demo(!strcmp(line, "ui.demo=1"));
         return true;
@@ -1049,6 +1075,22 @@ static bool console_command(char *line, bool whole)
             printf("@ui.error unknown settings page \"%s\": home wifi muse ble sound sleep battery power\n", line + 12);
             fflush(stdout);
         }
+        return true;
+    }
+#endif
+#if CONFIG_MUSE_WAKEWORD_ENABLE
+    if (!strcmp(line, "wake") || !strcmp(line, "wake.on") || !strcmp(line, "wake.off")) {
+        if (line[4] == '.') {
+            muse_wakeword_set_enabled(!strcmp(line, "wake.on"));
+        }
+        muse_wakeword_status_t st;
+        muse_wakeword_status(&st);
+        printf("@wake {\"enabled\":%s,\"listening\":%s,\"runner\":\"%s\",\"wakes\":%u,\"cancels\":%u,"
+               "\"submits\":%u,\"drops\":%u}\n",
+               st.enabled ? "true" : "false", st.listening ? "true" : "false", st.runner,
+               (unsigned)st.wakes, (unsigned)st.cancels, (unsigned)st.submits,
+               (unsigned)st.dropped_frames);
+        fflush(stdout);
         return true;
     }
 #endif
@@ -1087,7 +1129,8 @@ static bool console_command(char *line, bool whole)
  * the device's state, "power" the battery meter (muse_battery.h) and
  * "power.reset" starts it over, "nap" sleeps and leaves Wi-Fi at once (as
  * two minutes asleep on battery would; 'w' rejoins), "face=" shows a face
- * (see set_face), and "chat=" sends a typed message to Hatch (see chat_line
+ * (see set_face), "wake" prints the wake word state, "wake.on" and "wake.off"
+ * toggle listening, and "chat=" sends a typed message to Hatch (see chat_line
  * and tools/muse/chat.py).
  */
 static void serial_task(void *arg)
